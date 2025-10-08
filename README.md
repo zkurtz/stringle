@@ -16,6 +16,32 @@ uv sync
 
 ## Usage
 
+### Command Line Interface
+
+The easiest way to use stringle is via the command line:
+
+```bash
+# Basic replacement
+stringle /path/to/dir 'old:new'
+
+# Multiple replacements
+stringle /path/to/dir 'foo:bar' 'old:new'
+
+# Case-insensitive with specific extensions
+stringle /path/to/dir 'hello:hi' -i -e .py -e .txt
+
+# Regex replacement with dry run
+stringle /path/to/dir 'Test\d+:Result' -r --dry-run
+
+# Ignore specific directories
+stringle /path/to/dir 'old:new' --ignore-dir .git --ignore-dir build
+
+# See all options
+stringle --help
+```
+
+### Python API
+
 ### Basic Example
 
 ```python
