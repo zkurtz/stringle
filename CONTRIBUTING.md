@@ -58,15 +58,14 @@ python validate.py
 stringle/
 ├── src/stringle/
 │   ├── __init__.py      # Package exports
-│   ├── replacer.py      # Core replacement logic
-│   └── cli.py           # Command-line interface
+│   └── replacer.py      # Core replacement logic
 ├── tests/
 │   ├── __init__.py
 │   └── test_replacer.py # Unit tests
 ├── pyproject.toml       # Package configuration
 ├── README.md            # User documentation
 ├── QUICKSTART.md        # Quick start guide
-└── validate.py          # Manual validation script
+└── demo.py              # Demo script
 ```
 
 ## Making Changes
@@ -103,7 +102,6 @@ When adding new features:
 2. **Keep it focused**: Each PR should address a single feature or bug
 3. **Update docs**: Add examples to README.md or QUICKSTART.md
 4. **Add tests**: Ensure the new feature is well-tested
-5. **Update CLI**: If the feature should be accessible via CLI, update cli.py
 
 ## Bug Reports
 

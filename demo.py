@@ -4,16 +4,10 @@ Comprehensive demo of stringle functionality.
 This script creates a test directory structure and demonstrates all features.
 """
 
-import sys
-import os
 import tempfile
-import shutil
 from pathlib import Path
 
-# Add src to path for development
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
-
-from stringle import Replacer, replace_in_files
+from stringle import replace_in_files
 
 
 def setup_test_files(base_dir):
@@ -88,9 +82,9 @@ def demo_basic_replacement(base_dir):
         dry_run=False
     )
     
-    print(f"✓ Processed {stats['files_processed']} files")
-    print(f"✓ Modified {stats['files_modified']} files")
-    print(f"✓ Made {stats['total_replacements']} replacements")
+    print(f"✓ Processed {stats.files_processed} files")
+    print(f"✓ Modified {stats.files_modified} files")
+    print(f"✓ Made {stats.total_replacements} replacements")
     
     # Show a sample file
     sample_file = Path(base_dir) / "src" / "main.py"
@@ -112,9 +106,9 @@ def demo_case_insensitive(base_dir):
         case_sensitive=False
     )
     
-    print(f"✓ Processed {stats['files_processed']} files")
-    print(f"✓ Modified {stats['files_modified']} files")
-    print(f"✓ Made {stats['total_replacements']} replacements")
+    print(f"✓ Processed {stats.files_processed} files")
+    print(f"✓ Modified {stats.files_modified} files")
+    print(f"✓ Made {stats.total_replacements} replacements")
 
 
 def demo_regex(base_dir):
@@ -135,8 +129,8 @@ def demo_regex(base_dir):
         include_extensions=[".txt"]
     )
     
-    print(f"✓ Modified {stats['files_modified']} files")
-    print(f"✓ Made {stats['total_replacements']} replacements")
+    print(f"✓ Modified {stats.files_modified} files")
+    print(f"✓ Made {stats.total_replacements} replacements")
     print(f"\nResult: {test_file.read_text()}")
 
 
@@ -160,8 +154,8 @@ def demo_filtering(base_dir):
         include_extensions=[".py"]
     )
     
-    print(f"✓ Processed {stats['files_processed']} files")
-    print(f"✓ Modified {stats['files_modified']} files")
+    print(f"✓ Processed {stats.files_processed} files")
+    print(f"✓ Modified {stats.files_modified} files")
     print(f"\nPython file now contains: {py_file.read_text()}")
     print(f"Markdown file unchanged: {md_file.read_text()}")
 
@@ -182,9 +176,9 @@ def demo_dry_run(base_dir):
         dry_run=True
     )
     
-    print(f"✓ Would process {stats['files_processed']} files")
-    print(f"✓ Would modify {stats['files_modified']} files")
-    print(f"✓ Would make {stats['total_replacements']} replacements")
+    print(f"✓ Would process {stats.files_processed} files")
+    print(f"✓ Would modify {stats.files_modified} files")
+    print(f"✓ Would make {stats.total_replacements} replacements")
     
     after = test_file.read_text()
     print(f"\n✓ File unchanged: {original == after}")
@@ -211,7 +205,7 @@ def demo_ignore_dirs():
         
         stats = replace_in_files(base, [("test", "replaced")])
         
-        print(f"✓ Processed {stats['files_processed']} file(s)")
+        print(f"✓ Processed {stats.files_processed} file(s)")
         print(f"✓ .git/ and build/ were automatically ignored")
         print(f"\nFiles in src/: {(base / 'src' / 'file.txt').read_text()}")
         print(f"Files in .git/: {(base / '.git' / 'file.txt').read_text()}")
@@ -242,7 +236,6 @@ def main():
     print("="*70)
     print("\nStringle is ready to use!")
     print("\nTry it yourself:")
-    print("  CLI:    stringle /path/to/dir 'old:new'")
     print("  Python: replace_in_files('/path/to/dir', [('old', 'new')])")
 
 

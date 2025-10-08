@@ -3,9 +3,29 @@
 import os
 import re
 from pathlib import Path
-from typing import List, Tuple, Optional, Union, Callable
+
+import attrs
 
 
+@attrs.frozen
+class ReplacementStats:
+    """Statistics about a replacement operation.
+    
+    Attributes:
+        files_processed: Number of files processed
+        files_modified: Number of files that had replacements
+        total_replacements: Total number of replacements made
+        errors: List of (file_path, error_message) tuples
+        modified_files: List of file paths that were modified
+    """
+    files_processed: int
+    files_modified: int
+    total_replacements: int
+    errors: list[tuple[str, str]]
+    modified_files: list[str]
+
+
+@attrs.frozen
 class Replacer:
     """A class for performing bulk search and replace operations across files.
     
@@ -21,39 +41,28 @@ class Replacer:
         dry_run: If True, report what would be changed without making changes (default: False)
     """
     
-    def __init__(
-        self,
-        root_dir: Union[str, Path],
-        replacements: List[Tuple[str, str]],
-        case_sensitive: bool = True,
-        use_regex: bool = False,
-        ignore_dirs: Optional[List[str]] = None,
-        ignore_files: Optional[List[str]] = None,
-        ignore_extensions: Optional[List[str]] = None,
-        include_extensions: Optional[List[str]] = None,
-        dry_run: bool = False,
-    ):
-        self.root_dir = Path(root_dir).resolve()
-        self.replacements = replacements
-        self.case_sensitive = case_sensitive
-        self.use_regex = use_regex
-        self.dry_run = dry_run
-        
-        # Default to ignoring common VCS and build directories
-        self.ignore_dirs = ignore_dirs if ignore_dirs is not None else [
-            '.git', '.svn', '.hg', '__pycache__', '.pytest_cache',
-            'node_modules', '.venv', 'venv', 'build', 'dist', '.eggs'
-        ]
-        self.ignore_files = ignore_files or []
-        self.ignore_extensions = ignore_extensions or []
-        self.include_extensions = include_extensions
-        
-        # Compile regex patterns if needed
-        self._compiled_patterns = []
-        if use_regex:
-            flags = 0 if case_sensitive else re.IGNORECASE
-            for search, replace in replacements:
-                self._compiled_patterns.append((re.compile(search, flags), replace))
+    root_dir: Path = attrs.field(converter=lambda x: Path(x).resolve())
+    replacements: list[tuple[str, str]]
+    case_sensitive: bool = True
+    use_regex: bool = False
+    ignore_dirs: list[str] = attrs.field(factory=lambda: [
+        '.git', '.svn', '.hg', '__pycache__', '.pytest_cache',
+        'node_modules', '.venv', 'venv', 'build', 'dist', '.eggs'
+    ])
+    ignore_files: list[str] = attrs.field(factory=list)
+    ignore_extensions: list[str] = attrs.field(factory=list)
+    include_extensions: list[str] | None = None
+    dry_run: bool = False
+    _compiled_patterns: list[tuple[re.Pattern, str]] = attrs.field(init=False, repr=False)
+    
+    def __attrs_post_init__(self):
+        """Compile regex patterns if needed."""
+        compiled = []
+        if self.use_regex:
+            flags = 0 if self.case_sensitive else re.IGNORECASE
+            for search, replace in self.replacements:
+                compiled.append((re.compile(search, flags), replace))
+        object.__setattr__(self, '_compiled_patterns', compiled)
     
     def should_process_file(self, file_path: Path) -> bool:
         """Determine if a file should be processed based on filters.
@@ -88,7 +97,7 @@ class Replacer:
         """
         return dir_path.name not in self.ignore_dirs
     
-    def replace_in_content(self, content: str) -> Tuple[str, int]:
+    def replace_in_content(self, content: str) -> tuple[str, int]:
         """Perform replacements in content string.
         
         Args:
@@ -117,7 +126,7 @@ class Replacer:
         
         return modified, total_replacements
     
-    def process_file(self, file_path: Path) -> Tuple[int, Optional[str]]:
+    def process_file(self, file_path: Path) -> tuple[int, str | None]:
         """Process a single file.
         
         Args:
@@ -144,23 +153,17 @@ class Replacer:
         
         return num_replacements, None
     
-    def run(self) -> dict:
+    def run(self) -> ReplacementStats:
         """Execute the search and replace operation.
         
         Returns:
-            Dictionary with statistics about the operation:
-            - files_processed: Number of files processed
-            - files_modified: Number of files that had replacements
-            - total_replacements: Total number of replacements made
-            - errors: List of (file_path, error_message) tuples
+            ReplacementStats object with statistics about the operation
         """
-        stats = {
-            'files_processed': 0,
-            'files_modified': 0,
-            'total_replacements': 0,
-            'errors': [],
-            'modified_files': []
-        }
+        files_processed = 0
+        files_modified = 0
+        total_replacements = 0
+        errors = []
+        modified_files = []
         
         for root, dirs, files in os.walk(self.root_dir):
             # Filter directories in-place to prevent descending into ignored dirs
@@ -172,24 +175,30 @@ class Replacer:
                 if not self.should_process_file(file_path):
                     continue
                 
-                stats['files_processed'] += 1
+                files_processed += 1
                 num_replacements, error = self.process_file(file_path)
                 
                 if error:
-                    stats['errors'].append((str(file_path), error))
+                    errors.append((str(file_path), error))
                 elif num_replacements > 0:
-                    stats['files_modified'] += 1
-                    stats['total_replacements'] += num_replacements
-                    stats['modified_files'].append(str(file_path))
+                    files_modified += 1
+                    total_replacements += num_replacements
+                    modified_files.append(str(file_path))
         
-        return stats
+        return ReplacementStats(
+            files_processed=files_processed,
+            files_modified=files_modified,
+            total_replacements=total_replacements,
+            errors=errors,
+            modified_files=modified_files,
+        )
 
 
 def replace_in_files(
-    root_dir: Union[str, Path],
-    replacements: List[Tuple[str, str]],
+    root_dir: str | Path,
+    replacements: list[tuple[str, str]],
     **kwargs
-) -> dict:
+) -> ReplacementStats:
     """Convenience function to perform search and replace operations.
     
     Args:
@@ -198,7 +207,7 @@ def replace_in_files(
         **kwargs: Additional arguments passed to Replacer constructor
         
     Returns:
-        Dictionary with operation statistics
+        ReplacementStats object with operation statistics
         
     Example:
         >>> stats = replace_in_files(
@@ -207,7 +216,7 @@ def replace_in_files(
         ...     case_sensitive=False,
         ...     include_extensions=['.py', '.txt']
         ... )
-        >>> print(f"Modified {stats['files_modified']} files")
+        >>> print(f"Modified {stats.files_modified} files")
     """
     replacer = Replacer(root_dir, replacements, **kwargs)
     return replacer.run()

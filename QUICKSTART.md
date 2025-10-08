@@ -12,9 +12,6 @@ cd stringle
 
 # Sync dependencies with uv
 uv sync
-
-# Or install in development mode
-uv pip install -e .
 ```
 
 ## Installation with pip
@@ -35,69 +32,94 @@ pip install -e ".[dev]"
 
 ### 1. Basic usage - Replace in a directory
 
-```bash
-# Create a test directory
-mkdir test_dir
-echo "Hello world, world is great!" > test_dir/test.txt
-
-# Run stringle
-stringle test_dir "world:universe"
-
-# Check the result
-cat test_dir/test.txt
-# Output: Hello universe, universe is great!
-```
-
-### 2. Multiple replacements
-
-```bash
-stringle test_dir "foo:FOO" "bar:BAR" "baz:BAZ"
-```
-
-### 3. Case-insensitive replacement
-
-```bash
-echo "Hello HELLO hello" > test_dir/test.txt
-stringle test_dir "hello:hi" --ignore-case
-cat test_dir/test.txt
-# Output: hi hi hi
-```
-
-### 4. Regex replacement
-
-```bash
-echo "Price: $10.50 and $25.99" > test_dir/prices.txt
-stringle test_dir '\$([0-9.]+):£\1' --regex
-cat test_dir/prices.txt
-# Output: Price: £10.50 and £25.99
-```
-
-### 5. Filter by extension
-
-```bash
-# Only process Python files
-stringle test_dir "old_name:new_name" -e .py -e .pyx
-```
-
-### 6. Dry run (preview changes)
-
-```bash
-stringle test_dir "search:replace" --dry-run -v
-```
-
-### 7. Python API usage
-
 ```python
 from stringle import replace_in_files
 
 # Simple replacement
 stats = replace_in_files(
     'test_dir',
-    [('old', 'new'), ('foo', 'bar')]
+    [('world', 'universe')]
 )
+print(f"Modified {stats.files_modified} files")
+```
 
-print(f"Modified {stats['files_modified']} files")
-print(f"Made {stats['total_replacements']} replacements")
+### 2. Multiple replacements
+
+```python
+from stringle import replace_in_files
+
+stats = replace_in_files(
+    'test_dir',
+    [('foo', 'FOO'), ('bar', 'BAR'), ('baz', 'BAZ')]
+)
+```
+
+### 3. Case-insensitive replacement
+
+```python
+from stringle import replace_in_files
+
+stats = replace_in_files(
+    'test_dir',
+    [('hello', 'hi')],
+    case_sensitive=False
+)
+```
+
+### 4. Regex replacement
+
+```python
+from stringle import replace_in_files
+
+stats = replace_in_files(
+    'test_dir',
+    [(r'\$([0-9.]+)', r'£\1')],
+    use_regex=True
+)
+```
+
+### 5. Filter by extension
+
+```python
+from stringle import replace_in_files
+
+# Only process Python files
+stats = replace_in_files(
+    'test_dir',
+    [('old_name', 'new_name')],
+    include_extensions=['.py', '.pyx']
+)
+```
+
+### 6. Dry run (preview changes)
+
+```python
+from stringle import replace_in_files
+
+stats = replace_in_files(
+    'test_dir',
+    [('search', 'replace')],
+    dry_run=True
+)
+print(f"Would modify {stats.files_modified} files")
+```
+
+### 7. Advanced usage with Replacer class
+
+```python
+from stringle import Replacer
+
+replacer = Replacer(
+    root_dir='test_dir',
+    replacements=[('old', 'new'), ('foo', 'bar')],
+    case_sensitive=False,
+    use_regex=False,
+    include_extensions=['.py', '.txt']
+)
+stats = replacer.run()
+
+print(f"Modified {stats.files_modified} files")
+print(f"Made {stats.total_replacements} replacements")
 ```
 
 ## Running Tests
@@ -112,51 +134,77 @@ pytest
 # Run tests with coverage
 pytest --cov=stringle --cov-report=html
 
-# Or use the validation script
-python validate.py
+# Or run the demo script
+python demo.py
 ```
 
 ## Common Use Cases
 
 ### Rename variables across a codebase
 
-```bash
-stringle src/ "oldVariable:newVariable" -e .py -e .js
+```python
+from stringle import replace_in_files
+
+stats = replace_in_files(
+    'src/',
+    [('oldVariable', 'newVariable')],
+    include_extensions=['.py', '.js']
+)
 ```
 
 ### Update copyright year
 
-```bash
-stringle . "Copyright 2023:Copyright 2024" -e .py -e .js -e .html
+```python
+from stringle import replace_in_files
+
+stats = replace_in_files(
+    '.',
+    [('Copyright 2023', 'Copyright 2024')],
+    include_extensions=['.py', '.js', '.html']
+)
 ```
 
 ### Convert old API calls to new ones
 
-```bash
-stringle src/ "oldApi\\.method:newApi.method" --regex -e .py
+```python
+from stringle import replace_in_files
+
+stats = replace_in_files(
+    'src/',
+    [(r'oldApi\.method', 'newApi.method')],
+    use_regex=True,
+    include_extensions=['.py']
+)
 ```
 
 ### Remove TODO comments
 
-```bash
-stringle . "TODO\([^)]+\):DONE" --regex -e .py
+```python
+from stringle import replace_in_files
+
+stats = replace_in_files(
+    '.',
+    [(r'TODO\([^)]+\)', 'DONE')],
+    use_regex=True,
+    include_extensions=['.py']
+)
 ```
 
 ## Tips
 
-1. **Always use dry run first**: Use `--dry-run -v` to preview changes before applying them
-2. **Be specific with extensions**: Use `-e` to limit which files are processed
-3. **Use regex for complex patterns**: The `--regex` flag enables powerful pattern matching
+1. **Always use dry run first**: Use `dry_run=True` to preview changes before applying them
+2. **Be specific with extensions**: Use `include_extensions` to limit which files are processed
+3. **Use regex for complex patterns**: Set `use_regex=True` for powerful pattern matching
 4. **Ignore build directories**: Common directories like `.git`, `__pycache__`, `node_modules` are automatically ignored
-5. **Check the results**: The verbose flag (`-v`) shows which files were modified
+5. **Check the results**: Access `stats.modified_files` to see which files were changed
 
 ## Troubleshooting
 
 ### Binary files are skipped
-Stringle automatically skips binary files. You'll see them in the error list if verbose mode is enabled.
+Stringle automatically skips binary files. You'll see them in `stats.errors` if any errors occur.
 
 ### Permission errors
 Make sure you have write permissions for the files you want to modify.
 
 ### Regex not working as expected
-Remember to escape special characters. Use `\\` in the shell to represent a single backslash.
+Remember to escape special characters properly in Python strings. Use raw strings (`r"pattern"`) for regex patterns.
