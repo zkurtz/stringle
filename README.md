@@ -106,12 +106,6 @@ Run tests:
 pytest
 ```
 
-Run tests with coverage:
-
-```bash
-pytest --cov=stringle --cov-report=html
-```
-
 ## License
 
 MIT License - see LICENSE file for details
