@@ -5,12 +5,6 @@ String wrangling for bulk find-and-replace operations
 ## Installation
 
 ```bash
-pip install -e .
-```
-
-Or with uv:
-
-```bash
 uv sync
 ```
 
