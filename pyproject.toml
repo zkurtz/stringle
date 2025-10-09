@@ -31,11 +31,48 @@ dev = [
     "pytest-cov>=4.0.0",
 ]
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = "test_*.py"
-python_classes = "Test*"
-python_functions = "test_*"
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/stringle"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests",]
+
+[tool.pyright]
+include = ["src", "tests"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+  # ruff defaults:
+  "E4", "E7", "E9", "F",
+  # pycodestyle line formatting including line length
+  "E5",
+  # additional rule groups:
+  "I", # flake8-import-order
+  "TID", # flake8-tidy-imports
+  "D", # google-style docstrings,
+  "ANN", # require pyright type annotations
+]
+ignore = [
+  "ANN002", # Missing type annotation for *args
+  "ANN003", # Missing type annotation for **kwargs
+  "ANN101", # Missing type annotation for self in method
+  "ANN401", # Dynamically typed expressions (typing.Any) are disallowed in `**kwargs`
+  "D202", # would require one blank line after the last section of a multi-line docstring
+  "D203", # would require one blank line at start of class docstring
+  "D213", # would require multi-line docstring to start with a hard return
+  "D401", # would require imperative mood in docstring
+  "D413", # would put blank line at end of each multiline docstring
+]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["D104"] # would require module-level documentation
+"test_*.py" = [
+  "D", # would put requirements on docstrings in test files
+  "ANN201", # would require return type hint (normally None) for test functions
+]
