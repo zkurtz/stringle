@@ -25,13 +25,12 @@ class ReplacementStats:
     modified_files: list[str]
 
 
-@attrs.frozen
+@attrs.define
 class Replacer:
     """A class for performing bulk search and replace operations across files.
     
     Args:
-        root_dir: Root directory to search in
-        replacements: List of (search, replace) tuples
+        directory: Root directory to search in
         case_sensitive: Whether to perform case-sensitive matching (default: True)
         use_regex: Whether to treat search patterns as regular expressions (default: False)
         ignore_dirs: List of directory names to ignore (default: common VCS dirs)
@@ -39,10 +38,14 @@ class Replacer:
         ignore_extensions: List of file extensions to ignore (e.g., ['.pyc', '.exe'])
         include_extensions: If provided, only process files with these extensions
         dry_run: If True, report what would be changed without making changes (default: False)
+    
+    Example:
+        >>> replacer = Replacer(directory='/path/to/directory')
+        >>> stats = replacer([('old_text', 'new_text'), ('another_old', 'another_new')])
+        >>> print(stats)
     """
     
-    root_dir: Path = attrs.field(converter=lambda x: Path(x).resolve())
-    replacements: list[tuple[str, str]]
+    directory: Path = attrs.field(converter=lambda x: Path(x).resolve())
     case_sensitive: bool = True
     use_regex: bool = False
     ignore_dirs: list[str] = attrs.field(factory=lambda: [
@@ -53,16 +56,6 @@ class Replacer:
     ignore_extensions: list[str] = attrs.field(factory=list)
     include_extensions: list[str] | None = None
     dry_run: bool = False
-    _compiled_patterns: list[tuple[re.Pattern, str]] = attrs.field(init=False, repr=False)
-    
-    def __attrs_post_init__(self):
-        """Compile regex patterns if needed."""
-        compiled = []
-        if self.use_regex:
-            flags = 0 if self.case_sensitive else re.IGNORECASE
-            for search, replace in self.replacements:
-                compiled.append((re.compile(search, flags), replace))
-        object.__setattr__(self, '_compiled_patterns', compiled)
     
     def should_process_file(self, file_path: Path) -> bool:
         """Determine if a file should be processed based on filters.
@@ -97,11 +90,15 @@ class Replacer:
         """
         return dir_path.name not in self.ignore_dirs
     
-    def replace_in_content(self, content: str) -> tuple[str, int]:
+    def _replace_in_content(
+        self, content: str, replacements: list[tuple[str, str]], compiled_patterns: list[tuple[re.Pattern, str]]
+    ) -> tuple[str, int]:
         """Perform replacements in content string.
         
         Args:
             content: The content to perform replacements in
+            replacements: List of (search, replace) tuples
+            compiled_patterns: Compiled regex patterns (if use_regex is True)
             
         Returns:
             Tuple of (modified content, number of replacements made)
@@ -110,11 +107,11 @@ class Replacer:
         total_replacements = 0
         
         if self.use_regex:
-            for pattern, replacement in self._compiled_patterns:
+            for pattern, replacement in compiled_patterns:
                 modified, count = pattern.subn(replacement, modified)
                 total_replacements += count
         else:
-            for search, replace in self.replacements:
+            for search, replace in replacements:
                 if self.case_sensitive:
                     count = modified.count(search)
                     modified = modified.replace(search, replace)
@@ -126,11 +123,15 @@ class Replacer:
         
         return modified, total_replacements
     
-    def process_file(self, file_path: Path) -> tuple[int, str | None]:
+    def _process_file(
+        self, file_path: Path, replacements: list[tuple[str, str]], compiled_patterns: list[tuple[re.Pattern, str]]
+    ) -> tuple[int, str | None]:
         """Process a single file.
         
         Args:
             file_path: Path to the file to process
+            replacements: List of (search, replace) tuples
+            compiled_patterns: Compiled regex patterns (if use_regex is True)
             
         Returns:
             Tuple of (number of replacements, error message if any)
@@ -142,7 +143,7 @@ class Replacer:
         except (UnicodeDecodeError, PermissionError) as e:
             return 0, f"Skipped (cannot read): {e}"
         
-        modified_content, num_replacements = self.replace_in_content(content)
+        modified_content, num_replacements = self._replace_in_content(content, replacements, compiled_patterns)
         
         if num_replacements > 0 and not self.dry_run:
             try:
@@ -153,19 +154,29 @@ class Replacer:
         
         return num_replacements, None
     
-    def run(self) -> ReplacementStats:
+    def __call__(self, replacements: list[tuple[str, str]]) -> ReplacementStats:
         """Execute the search and replace operation.
+        
+        Args:
+            replacements: List of (search, replace) tuples
         
         Returns:
             ReplacementStats object with statistics about the operation
         """
+        # Compile regex patterns if needed
+        compiled_patterns = []
+        if self.use_regex:
+            flags = 0 if self.case_sensitive else re.IGNORECASE
+            for search, replace in replacements:
+                compiled_patterns.append((re.compile(search, flags), replace))
+        
         files_processed = 0
         files_modified = 0
         total_replacements = 0
         errors = []
         modified_files = []
         
-        for root, dirs, files in os.walk(self.root_dir):
+        for root, dirs, files in os.walk(self.directory):
             # Filter directories in-place to prevent descending into ignored dirs
             dirs[:] = [d for d in dirs if self.should_process_dir(Path(root) / d)]
             
@@ -176,7 +187,7 @@ class Replacer:
                     continue
                 
                 files_processed += 1
-                num_replacements, error = self.process_file(file_path)
+                num_replacements, error = self._process_file(file_path, replacements, compiled_patterns)
                 
                 if error:
                     errors.append((str(file_path), error))
@@ -193,30 +204,3 @@ class Replacer:
             modified_files=modified_files,
         )
 
-
-def replace_in_files(
-    root_dir: str | Path,
-    replacements: list[tuple[str, str]],
-    **kwargs
-) -> ReplacementStats:
-    """Convenience function to perform search and replace operations.
-    
-    Args:
-        root_dir: Root directory to search in
-        replacements: List of (search, replace) tuples
-        **kwargs: Additional arguments passed to Replacer constructor
-        
-    Returns:
-        ReplacementStats object with operation statistics
-        
-    Example:
-        >>> stats = replace_in_files(
-        ...     '/path/to/dir',
-        ...     [('old_name', 'new_name'), ('foo', 'bar')],
-        ...     case_sensitive=False,
-        ...     include_extensions=['.py', '.txt']
-        ... )
-        >>> print(f"Modified {stats.files_modified} files")
-    """
-    replacer = Replacer(root_dir, replacements, **kwargs)
-    return replacer.run()
