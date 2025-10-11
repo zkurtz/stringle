@@ -58,7 +58,6 @@ select = [
 ignore = [
   "ANN002", # Missing type annotation for *args
   "ANN003", # Missing type annotation for **kwargs
-  "ANN101", # Missing type annotation for self in method
   "ANN401", # Dynamically typed expressions (typing.Any) are disallowed in `**kwargs`
   "D202", # would require one blank line after the last section of a multi-line docstring
   "D203", # would require one blank line at start of class docstring
