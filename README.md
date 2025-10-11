@@ -1,7 +1,5 @@
 # stringle
 
-UNDER EARLY DEVELOPMENT - DO NOT USE
-
 String wrangling for bulk find-and-replace operations. Example:
 
 ```python
