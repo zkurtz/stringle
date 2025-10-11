@@ -5,7 +5,7 @@ from pathlib import Path
 from stringle import Replacer, replace_in_files
 
 
-def test_simple_replacement(tmp_path):
+def test_simple_replacement(tmp_path: Path) -> None:
     """Test basic search and replace."""
     # Create a test file
     test_file = tmp_path / "test.txt"
@@ -25,7 +25,7 @@ def test_simple_replacement(tmp_path):
     assert test_file.read_text() == "Hello universe, universe is great!"
 
 
-def test_multiple_replacements(tmp_path):
+def test_multiple_replacements(tmp_path: Path) -> None:
     """Test multiple search and replace patterns."""
     test_file = tmp_path / "test.txt"
     test_file.write_text("foo bar baz")
@@ -40,7 +40,7 @@ def test_multiple_replacements(tmp_path):
     assert test_file.read_text() == "FOO BAR BAZ"
 
 
-def test_case_insensitive(tmp_path):
+def test_case_insensitive(tmp_path: Path) -> None:
     """Test case-insensitive replacement."""
     test_file = tmp_path / "test.txt"
     test_file.write_text("Hello HELLO hello HeLLo")
@@ -56,7 +56,7 @@ def test_case_insensitive(tmp_path):
     assert test_file.read_text() == "hi hi hi hi"
 
 
-def test_case_sensitive(tmp_path):
+def test_case_sensitive(tmp_path: Path) -> None:
     """Test case-sensitive replacement."""
     test_file = tmp_path / "test.txt"
     test_file.write_text("Hello hello HELLO")
@@ -72,7 +72,7 @@ def test_case_sensitive(tmp_path):
     assert test_file.read_text() == "Hello hi HELLO"
 
 
-def test_regex_replacement(tmp_path):
+def test_regex_replacement(tmp_path: Path) -> None:
     """Test regex-based replacement."""
     test_file = tmp_path / "test.txt"
     test_file.write_text("Test123 Test456 Test789")
@@ -88,7 +88,7 @@ def test_regex_replacement(tmp_path):
     assert test_file.read_text() == "Result Result Result"
 
 
-def test_regex_with_groups(tmp_path):
+def test_regex_with_groups(tmp_path: Path) -> None:
     """Test regex replacement with capture groups."""
     test_file = tmp_path / "test.txt"
     test_file.write_text("Price: $10.50 and $20.75")
@@ -104,7 +104,7 @@ def test_regex_with_groups(tmp_path):
     assert test_file.read_text() == "Price: £10.50 and £20.75"
 
 
-def test_ignore_dirs(tmp_path):
+def test_ignore_dirs(tmp_path: Path) -> None:
     """Test ignoring specific directories."""
     # Create directory structure
     (tmp_path / "include").mkdir()
@@ -124,7 +124,7 @@ def test_ignore_dirs(tmp_path):
     assert (tmp_path / ".git" / "test.txt").read_text() == "foo"
 
 
-def test_ignore_files(tmp_path):
+def test_ignore_files(tmp_path: Path) -> None:
     """Test ignoring specific files."""
     (tmp_path / "process.txt").write_text("foo")
     (tmp_path / "ignore.txt").write_text("foo")
@@ -141,7 +141,7 @@ def test_ignore_files(tmp_path):
     assert (tmp_path / "ignore.txt").read_text() == "foo"
 
 
-def test_ignore_extensions(tmp_path):
+def test_ignore_extensions(tmp_path: Path) -> None:
     """Test ignoring files by extension."""
     (tmp_path / "test.txt").write_text("foo")
     (tmp_path / "test.log").write_text("foo")
@@ -158,7 +158,7 @@ def test_ignore_extensions(tmp_path):
     assert (tmp_path / "test.log").read_text() == "foo"
 
 
-def test_include_extensions(tmp_path):
+def test_include_extensions(tmp_path: Path) -> None:
     """Test processing only specific extensions."""
     (tmp_path / "test.py").write_text("foo")
     (tmp_path / "test.txt").write_text("foo")
@@ -175,7 +175,7 @@ def test_include_extensions(tmp_path):
     assert (tmp_path / "test.txt").read_text() == "foo"
 
 
-def test_dry_run(tmp_path):
+def test_dry_run(tmp_path: Path) -> None:
     """Test dry run mode."""
     test_file = tmp_path / "test.txt"
     test_file.write_text("foo bar")
@@ -194,7 +194,7 @@ def test_dry_run(tmp_path):
     assert test_file.read_text() == "foo bar"
 
 
-def test_recursive_processing(tmp_path):
+def test_recursive_processing(tmp_path: Path) -> None:
     """Test recursive directory processing."""
     # Create nested structure
     (tmp_path / "dir1").mkdir()
@@ -216,7 +216,7 @@ def test_recursive_processing(tmp_path):
     assert (tmp_path / "dir1" / "dir2" / "file3.txt").read_text() == "bar"
 
 
-def test_no_replacements(tmp_path):
+def test_no_replacements(tmp_path: Path) -> None:
     """Test when no replacements are found."""
     test_file = tmp_path / "test.txt"
     test_file.write_text("hello world")
@@ -233,7 +233,7 @@ def test_no_replacements(tmp_path):
     assert test_file.read_text() == "hello world"
 
 
-def test_replace_in_files(tmp_path):
+def test_replace_in_files(tmp_path: Path) -> None:
     """Test the convenience function."""
     test_file = tmp_path / "test.txt"
     test_file.write_text("foo bar baz")
@@ -249,7 +249,7 @@ def test_replace_in_files(tmp_path):
     assert test_file.read_text() == "FOO BAR baz"
 
 
-def test_with_include_extensions(tmp_path):
+def test_with_include_extensions(tmp_path: Path) -> None:
     """Test convenience function with extension filter."""
     (tmp_path / "test.py").write_text("old_name")
     (tmp_path / "test.txt").write_text("old_name")

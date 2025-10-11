@@ -1,6 +1,6 @@
-#!/usr/bin/env python3
-"""
-Comprehensive demo of stringle functionality.
+
+"""Demo of stringle functionality.
+
 This script creates a test directory structure and demonstrates all features.
 """
 
