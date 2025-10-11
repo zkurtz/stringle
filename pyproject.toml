@@ -76,3 +76,9 @@ ban-relative-imports = "all"
   "D", # would put requirements on docstrings in test files
   "ANN201", # would require return type hint (normally None) for test functions
 ]
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.406",
+    "ruff>=0.14.0",
+]
