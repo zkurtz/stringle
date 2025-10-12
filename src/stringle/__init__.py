@@ -2,7 +2,7 @@
 
 from importlib.metadata import version
 
-from stringle.replacer import ReplacementStats, Replacer
+from stringle.replacer import Replacer, Stats
 
 __version__ = version("stringle")
-__all__ = ["Replacer", "ReplacementStats"]
+__all__ = ["Replacer", "Stats"]
