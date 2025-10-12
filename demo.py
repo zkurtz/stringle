@@ -115,7 +115,11 @@ def demo_regex(base_dir: Path) -> None:
     test_file.write_text("Price: $10.50 and $25.99 total $36.49")
 
     print("\nConverting dollar amounts to pounds using regex...")
-    replacer = Replacer(directory=base_dir, use_regex=True, include_extensions=[".txt"])
+    replacer = Replacer(
+        directory=base_dir,
+        use_regex=True,
+        include_extensions=[".txt"],
+    )
     stats = replacer([(r"\$(\d+\.\d+)", r"£\1")])
 
     print(f"✓ Modified {stats.files_modified} files")

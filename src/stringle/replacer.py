@@ -103,7 +103,10 @@ class Replacer:
         return dir_path.name not in self.ignore_dirs
 
     def _replace_in_content(
-        self, content: str, replacements: list[tuple[str, str]], compiled_patterns: list[tuple[re.Pattern, str]]
+        self,
+        content: str,
+        replacements: list[tuple[str, str]],
+        compiled_patterns: list[tuple[re.Pattern, str]],
     ) -> tuple[str, int]:
         """Perform replacements in content string.
 
@@ -136,7 +139,10 @@ class Replacer:
         return modified, total_replacements
 
     def _process_file(
-        self, file_path: Path, replacements: list[tuple[str, str]], compiled_patterns: list[tuple[re.Pattern, str]]
+        self,
+        file_path: Path,
+        replacements: list[tuple[str, str]],
+        compiled_patterns: list[tuple[re.Pattern, str]],
     ) -> tuple[int, str | None]:
         """Process a single file.
 
@@ -150,16 +156,28 @@ class Replacer:
         """
         try:
             # Try to read as text file
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(
+                file_path,
+                "r",
+                encoding="utf-8",
+            ) as f:
                 content = f.read()
         except (UnicodeDecodeError, PermissionError) as e:
             return 0, f"Skipped (cannot read): {e}"
 
-        modified_content, num_replacements = self._replace_in_content(content, replacements, compiled_patterns)
+        modified_content, num_replacements = self._replace_in_content(
+            content,
+            replacements,
+            compiled_patterns,
+        )
 
         if num_replacements > 0 and not self.dry_run:
             try:
-                with open(file_path, "w", encoding="utf-8") as f:
+                with open(
+                    file_path,
+                    "w",
+                    encoding="utf-8",
+                ) as f:
                     f.write(modified_content)
             except Exception as e:
                 return 0, f"Error writing file: {e}"
@@ -199,7 +217,11 @@ class Replacer:
                     continue
 
                 files_processed += 1
-                num_replacements, error = self._process_file(file_path, replacements, compiled_patterns)
+                num_replacements, error = self._process_file(
+                    file_path,
+                    replacements,
+                    compiled_patterns,
+                )
 
                 if error:
                     errors.append((str(file_path), error))
