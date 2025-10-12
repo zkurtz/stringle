@@ -79,5 +79,6 @@ ban-relative-imports = "all"
 [dependency-groups]
 dev = [
     "pyright>=1.1.406",
+    "pytest>=8.4.2",
     "ruff>=0.14.0",
 ]
