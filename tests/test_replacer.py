@@ -104,7 +104,7 @@ def test_ignore_files(tmp_path: Path) -> None:
     (tmp_path / "process.txt").write_text("foo")
     (tmp_path / "ignore.txt").write_text("foo")
 
-    replacer = Replacer(directory=tmp_path, ignore_files=["ignore.txt"])
+    replacer = Replacer(directory=tmp_path, ignore_files=[str(tmp_path / "ignore.txt")])
     stats = replacer([("foo", "bar")])
 
     assert stats.files_processed == 1

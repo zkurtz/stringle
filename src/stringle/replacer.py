@@ -8,7 +8,7 @@ import attrs
 
 
 @attrs.frozen
-class ReplacementStats:
+class Stats:
     """Statistics about a replacement operation.
 
     Attributes:
@@ -26,7 +26,10 @@ class ReplacementStats:
     modified_files: list[str]
 
 
-@attrs.define
+# Using @attrs.define instead of @attrs.frozen because Replacer needs to support
+# mutable default factory fields (ignore_dirs, ignore_files, ignore_extensions)
+# and the attrs library doesn't support mutable defaults with frozen classes.
+@attrs.define(kw_only=True)
 class Replacer:
     """A class for performing bulk search and replace operations across files.
 
@@ -35,7 +38,7 @@ class Replacer:
         case_sensitive: Whether to perform case-sensitive matching (default: True)
         use_regex: Whether to treat search patterns as regular expressions (default: False)
         ignore_dirs: List of directory names to ignore (default: common VCS dirs)
-        ignore_files: List of file names to ignore
+        ignore_files: List of full file paths to ignore
         ignore_extensions: List of file extensions to ignore (e.g., ['.pyc', '.exe'])
         include_extensions: If provided, only process files with these extensions
         dry_run: If True, report what would be changed without making changes (default: False)
@@ -46,7 +49,7 @@ class Replacer:
         >>> print(stats)
     """
 
-    directory: Path = attrs.field(converter=lambda x: Path(x).resolve())
+    directory: Path = attrs.field(converter=lambda x: Path(x).resolve(), kw_only=False)
     case_sensitive: bool = True
     use_regex: bool = False
     ignore_dirs: list[str] = attrs.field(
@@ -78,8 +81,8 @@ class Replacer:
         Returns:
             True if the file should be processed, False otherwise
         """
-        # Check if file is in ignored files list
-        if file_path.name in self.ignore_files:
+        # Check if file is in ignored files list (using full paths)
+        if str(file_path) in self.ignore_files:
             return False
 
         # Check file extension
@@ -91,20 +94,10 @@ class Replacer:
 
         return True
 
-    def should_process_dir(self, dir_path: Path) -> bool:
-        """Determine if a directory should be processed.
-
-        Args:
-            dir_path: Path to the directory
-
-        Returns:
-            True if the directory should be processed, False otherwise
-        """
-        return dir_path.name not in self.ignore_dirs
-
     def _replace_in_content(
         self,
         content: str,
+        *,
         replacements: list[tuple[str, str]],
         compiled_patterns: list[tuple[re.Pattern, str]],
     ) -> tuple[str, int]:
@@ -141,6 +134,7 @@ class Replacer:
     def _process_file(
         self,
         file_path: Path,
+        *,
         replacements: list[tuple[str, str]],
         compiled_patterns: list[tuple[re.Pattern, str]],
     ) -> tuple[int, str | None]:
@@ -156,42 +150,32 @@ class Replacer:
         """
         try:
             # Try to read as text file
-            with open(
-                file_path,
-                "r",
-                encoding="utf-8",
-            ) as f:
-                content = f.read()
+            content = file_path.read_text(encoding="utf-8")
         except (UnicodeDecodeError, PermissionError) as e:
             return 0, f"Skipped (cannot read): {e}"
 
         modified_content, num_replacements = self._replace_in_content(
             content,
-            replacements,
-            compiled_patterns,
+            replacements=replacements,
+            compiled_patterns=compiled_patterns,
         )
 
         if num_replacements > 0 and not self.dry_run:
             try:
-                with open(
-                    file_path,
-                    "w",
-                    encoding="utf-8",
-                ) as f:
-                    f.write(modified_content)
+                file_path.write_text(modified_content, encoding="utf-8")
             except Exception as e:
                 return 0, f"Error writing file: {e}"
 
         return num_replacements, None
 
-    def __call__(self, replacements: list[tuple[str, str]]) -> ReplacementStats:
+    def __call__(self, replacements: list[tuple[str, str]]) -> Stats:
         """Execute the search and replace operation.
 
         Args:
             replacements: List of (search, replace) tuples
 
         Returns:
-            ReplacementStats object with statistics about the operation
+            Stats object with statistics about the operation
         """
         # Compile regex patterns if needed
         compiled_patterns = []
@@ -208,7 +192,7 @@ class Replacer:
 
         for root, dirs, files in os.walk(self.directory):
             # Filter directories in-place to prevent descending into ignored dirs
-            dirs[:] = [d for d in dirs if self.should_process_dir(Path(root) / d)]
+            dirs[:] = [d for d in dirs if Path(root, d).name not in self.ignore_dirs]
 
             for filename in files:
                 file_path = Path(root) / filename
@@ -219,8 +203,8 @@ class Replacer:
                 files_processed += 1
                 num_replacements, error = self._process_file(
                     file_path,
-                    replacements,
-                    compiled_patterns,
+                    replacements=replacements,
+                    compiled_patterns=compiled_patterns,
                 )
 
                 if error:
@@ -230,7 +214,7 @@ class Replacer:
                     total_replacements += num_replacements
                     modified_files.append(str(file_path))
 
-        return ReplacementStats(
+        return Stats(
             files_processed=files_processed,
             files_modified=files_modified,
             total_replacements=total_replacements,
