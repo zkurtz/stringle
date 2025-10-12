@@ -16,19 +16,16 @@ print(stats)
 
 ## Features
 
-Core features:
 - **Recursive directory traversal** - Process entire directory trees
 - **Multiple replacements** - Apply many find-and-replace operations in one pass
-- **Flexible filtering**:
-  - Ignore specific directories (e.g., `.git`, `.venv`, `node_modules`)
-  - Ignore specific files
-  - Filter by file extension
-
-Possible future features:
 - **Case sensitivity control** - Case-sensitive or case-insensitive matching
 - **Regex support** - Use regular expressions for complex patterns
 - **Dry run mode** - Preview changes before applying them
 - **Detailed statistics** - Get reports on files processed and modified
+- **Flexible filtering**:
+  - Ignore specific directories (e.g., `.git`, `.venv`, `node_modules`)
+  - Ignore specific files
+  - Filter by file extension (ignore or include specific extensions)
 
 
 ## Installation
