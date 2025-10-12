@@ -49,7 +49,7 @@ class Replacer:
         >>> print(stats)
     """
 
-    directory: Path = attrs.field(converter=lambda x: Path(x).resolve(), kw_only=False)
+    directory: Path = attrs.field(converter=lambda x: Path(x).resolve())
     case_sensitive: bool = True
     use_regex: bool = False
     ignore_dirs: list[str] = attrs.field(
