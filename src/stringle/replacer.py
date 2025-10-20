@@ -119,6 +119,8 @@ class Replacer:
         files: List of file paths to process
         case_sensitive: Whether to perform case-sensitive matching (default: True)
         use_regex: Whether to treat search patterns as regular expressions (default: False)
+        sort: Whether to sort replacements by search string length (longest first) (default: True)
+        replacements: Optional list of (search, replace) tuples to set at initialization
 
     Example:
         >>> directory = Directory(path='/path/to/directory')
@@ -129,6 +131,40 @@ class Replacer:
     files: list[Path]
     case_sensitive: bool = True
     use_regex: bool = False
+    sort: bool = True
+    replacements: list[tuple[str, str]] = attrs.field(factory=list)
+
+    @cached_property
+    def ordered_replacements(self) -> list[tuple[str, str]]:
+        """Get replacements in the correct order.
+
+        If sort is True, sorts replacements by the length of the search string
+        (longest first) to ensure more specific replacements happen before
+        general ones.
+
+        Returns:
+            Ordered list of (search, replace) tuples
+        """
+        if not self.sort:
+            return self.replacements
+        return sorted(self.replacements, key=lambda x: len(x[0]), reverse=True)
+
+    def _get_ordered_replacements(self, replacements: list[tuple[str, str]]) -> list[tuple[str, str]]:
+        """Get replacements in the correct order.
+
+        If sort is True, sorts replacements by the length of the search string
+        (longest first) to ensure more specific replacements happen before
+        general ones.
+
+        Args:
+            replacements: List of (search, replace) tuples
+
+        Returns:
+            Ordered list of (search, replace) tuples
+        """
+        if not self.sort:
+            return replacements
+        return sorted(replacements, key=lambda x: len(x[0]), reverse=True)
 
     def _replace_in_content(
         self,
@@ -200,11 +236,14 @@ class Replacer:
         Args:
             replacements: List of (search, replace) tuples
         """
+        # Get ordered replacements
+        ordered_replacements = self._get_ordered_replacements(replacements)
+
         # Compile regex patterns if needed
         compiled_patterns = []
         if self.use_regex:
             flags = 0 if self.case_sensitive else re.IGNORECASE
-            for search, replace in replacements:
+            for search, replace in ordered_replacements:
                 compiled_patterns.append((re.compile(search, flags), replace))
 
         logger.info(f"Processing {len(self.files)} files with {len(replacements)} replacement(s)")
@@ -216,7 +255,7 @@ class Replacer:
         for file_path in iterator:
             files_modified += self._process_file(
                 file_path,
-                replacements=replacements,
+                replacements=ordered_replacements,
                 compiled_patterns=compiled_patterns,
             )
 

@@ -206,3 +206,78 @@ def test_directory_other_files(tmp_path: Path) -> None:
 
     assert len(other) == 1
     assert tmp_path / ".git" / "config" in other
+
+
+def test_replacement_sorting_default(tmp_path: Path) -> None:
+    """Test that replacements are sorted by length by default (longest first)."""
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("abcd ab a")
+
+    directory = Directory(path=tmp_path)
+    replacer = Replacer(files=directory.selected_files)
+    # Providing in reverse order, but should be sorted by length
+    replacer([("a", "X"), ("ab", "Y"), ("abcd", "Z")])
+
+    # Should replace longest first: abcd->Z, then ab->Y, then a->X
+    assert test_file.read_text() == "Z Y X"
+
+
+def test_replacement_sorting_disabled(tmp_path: Path) -> None:
+    """Test that sorting can be disabled with sort=False."""
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("abcd ab a")
+
+    directory = Directory(path=tmp_path)
+    replacer = Replacer(files=directory.selected_files, sort=False)
+    # With sort=False, replacements happen in the order given
+    replacer([("a", "X"), ("ab", "Y"), ("abcd", "Z")])
+
+    # Should replace in order: a->X first (replacing all 'a'), then ab, then abcd
+    assert test_file.read_text() == "Xbcd Xb X"
+
+
+def test_ordered_replacements_property(tmp_path: Path) -> None:
+    """Test the ordered_replacements cached property."""
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("test")
+
+    directory = Directory(path=tmp_path)
+    replacer = Replacer(
+        files=directory.selected_files,
+        sort=True,
+        replacements=[("a", "X"), ("ab", "Y"), ("abcd", "Z")],
+    )
+
+    # Should be sorted by length, longest first
+    assert replacer.ordered_replacements == [("abcd", "Z"), ("ab", "Y"), ("a", "X")]
+
+
+def test_ordered_replacements_no_sort(tmp_path: Path) -> None:
+    """Test ordered_replacements property with sort=False."""
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("test")
+
+    directory = Directory(path=tmp_path)
+    original_list = [("a", "X"), ("ab", "Y"), ("abcd", "Z")]
+    replacer = Replacer(
+        files=directory.selected_files,
+        sort=False,
+        replacements=original_list,
+    )
+
+    # Should maintain original order when sort=False
+    assert replacer.ordered_replacements == original_list
+
+
+def test_replacement_sorting_with_regex(tmp_path: Path) -> None:
+    """Test that sorting works with regex patterns by string length."""
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("foobar foo f")
+
+    directory = Directory(path=tmp_path)
+    replacer = Replacer(files=directory.selected_files, use_regex=True, sort=True)
+    # Different length patterns - should be sorted by pattern string length
+    replacer([(r"f", "X"), (r"foo", "Y"), (r"foobar", "Z")])
+
+    # Should replace longest pattern first: foobar->Z, foo->Y, f->X
+    assert test_file.read_text() == "Z Y X"
