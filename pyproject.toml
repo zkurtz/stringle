@@ -23,6 +23,7 @@ classifiers = [
 ]
 dependencies = [
     "attrs>=23.0.0",
+    "tqdm>=4.65.0",
 ]
 
 [project.optional-dependencies]

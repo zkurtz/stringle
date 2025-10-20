@@ -3,25 +3,24 @@
 String wrangling for bulk find-and-replace operations. Example:
 
 ```python
-from stringle import Replacer
+from stringle import Directory, Replacer
 
 replacements = [
     ('old_text', 'new_text'),
     ('another_old', 'another_new'),
 ]
-replacer = Replacer(directory='/path/to/directory')
-stats = replacer(replacements)
-print(stats)
+directory = Directory(path='/path/to/directory')
+replacer = Replacer(files=directory.selected_files)
+replacer(replacements)
 ```
 
 ## Features
 
-- **Recursive directory traversal** - Process entire directory trees
+- **Recursive directory traversal** - Process entire directory trees with the Directory class
 - **Multiple replacements** - Apply many find-and-replace operations in one pass
 - **Case sensitivity control** - Case-sensitive or case-insensitive matching
 - **Regex support** - Use regular expressions for complex patterns
-- **Dry run mode** - Preview changes before applying them
-- **Detailed statistics** - Get reports on files processed and modified
+- **Progress tracking** - Visual progress bar with tqdm
 - **Flexible filtering**:
   - Ignore specific directories (e.g., `.git`, `.venv`, `node_modules`)
   - Ignore specific files

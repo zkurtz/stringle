@@ -6,7 +6,7 @@ This script creates a test directory structure and demonstrates all features.
 import tempfile
 from pathlib import Path
 
-from stringle import Replacer
+from stringle import Directory, Replacer
 
 
 def setup_test_files(base_dir: Path) -> Path:
@@ -75,12 +75,11 @@ def demo_basic_replacement(base_dir: Path) -> None:
     print("=" * 70)
 
     print("\nReplacing 'old_function' with 'new_function' in all files...")
-    replacer = Replacer(directory=base_dir, dry_run=False)
-    stats = replacer([("old_function", "new_function")])
+    directory = Directory(path=base_dir)
+    replacer = Replacer(files=directory.selected_files)
+    replacer([("old_function", "new_function")])
 
-    print(f"✓ Processed {stats.files_processed} files")
-    print(f"✓ Modified {stats.files_modified} files")
-    print(f"✓ Made {stats.total_replacements} replacements")
+    print(f"✓ Processed {len(directory.selected_files)} files")
 
     # Show a sample file
     sample_file = Path(base_dir) / "src" / "main.py"
@@ -96,12 +95,11 @@ def demo_case_insensitive(base_dir: Path) -> None:
     print("=" * 70)
 
     print("\nReplacing 'old' with 'new' (case-insensitive) in all files...")
-    replacer = Replacer(directory=base_dir, case_sensitive=False)
-    stats = replacer([("old", "new")])
+    directory = Directory(path=base_dir)
+    replacer = Replacer(files=directory.selected_files, case_sensitive=False)
+    replacer([("old", "new")])
 
-    print(f"✓ Processed {stats.files_processed} files")
-    print(f"✓ Modified {stats.files_modified} files")
-    print(f"✓ Made {stats.total_replacements} replacements")
+    print(f"✓ Processed {len(directory.selected_files)} files")
 
 
 def demo_regex(base_dir: Path) -> None:
@@ -115,15 +113,10 @@ def demo_regex(base_dir: Path) -> None:
     test_file.write_text("Price: $10.50 and $25.99 total $36.49")
 
     print("\nConverting dollar amounts to pounds using regex...")
-    replacer = Replacer(
-        directory=base_dir,
-        use_regex=True,
-        include_extensions=[".txt"],
-    )
-    stats = replacer([(r"\$(\d+\.\d+)", r"£\1")])
+    directory = Directory(path=base_dir, include_extensions=[".txt"])
+    replacer = Replacer(files=directory.selected_files, use_regex=True)
+    replacer([(r"\$(\d+\.\d+)", r"£\1")])
 
-    print(f"✓ Modified {stats.files_modified} files")
-    print(f"✓ Made {stats.total_replacements} replacements")
     print(f"\nResult: {test_file.read_text()}")
 
 
@@ -141,11 +134,11 @@ def demo_filtering(base_dir: Path) -> None:
     md_file.write_text("TEST_CONSTANT should not change")
 
     print("\nReplacing 'TEST_CONSTANT' only in Python files...")
-    replacer = Replacer(directory=base_dir, include_extensions=[".py"])
-    stats = replacer([("TEST_CONSTANT", "PRODUCTION_CONSTANT")])
+    directory = Directory(path=base_dir, include_extensions=[".py"])
+    replacer = Replacer(files=directory.selected_files)
+    replacer([("TEST_CONSTANT", "PRODUCTION_CONSTANT")])
 
-    print(f"✓ Processed {stats.files_processed} files")
-    print(f"✓ Modified {stats.files_modified} files")
+    print(f"✓ Processed {len(directory.selected_files)} files")
     print(f"\nPython file now contains: {py_file.read_text()}")
     print(f"Markdown file unchanged: {md_file.read_text()}")
 
@@ -160,12 +153,9 @@ def demo_dry_run(base_dir: Path) -> None:
     original = test_file.read_text()
 
     print("\nDry run: Would replace 'value' with 'data'...")
-    replacer = Replacer(directory=base_dir, dry_run=True)
-    stats = replacer([("value", "data")])
-
-    print(f"✓ Would process {stats.files_processed} files")
-    print(f"✓ Would modify {stats.files_modified} files")
-    print(f"✓ Would make {stats.total_replacements} replacements")
+    directory = Directory(path=base_dir)
+    replacer = Replacer(files=directory.selected_files)
+    replacer([("value", "data")])
 
     after = test_file.read_text()
     print(f"\n✓ File unchanged: {original == after}")
@@ -190,10 +180,11 @@ def demo_ignore_dirs() -> None:
         print("\nReplacing 'test' with 'replaced'...")
         print("(Default ignores: .git, build, __pycache__, etc.)")
 
-        replacer = Replacer(directory=base)
-        stats = replacer([("test", "replaced")])
+        directory = Directory(path=base)
+        replacer = Replacer(files=directory.selected_files)
+        replacer([("test", "replaced")])
 
-        print(f"✓ Processed {stats.files_processed} file(s)")
+        print(f"✓ Processed {len(directory.selected_files)} file(s)")
         print("✓ .git/ and build/ were automatically ignored")
         print(f"\nFiles in src/: {(base / 'src' / 'file.txt').read_text()}")
         print(f"Files in .git/: {(base / '.git' / 'file.txt').read_text()}")
@@ -224,9 +215,10 @@ def main() -> None:
     print("=" * 70)
     print("\nStringle is ready to use!")
     print("\nTry it yourself:")
-    print("  from stringle import Replacer")
-    print("  replacer = Replacer(directory='/path/to/dir')")
-    print("  stats = replacer([('old', 'new')])")
+    print("  from stringle import Directory, Replacer")
+    print("  directory = Directory(path='/path/to/dir')")
+    print("  replacer = Replacer(files=directory.selected_files)")
+    print("  replacer([('old', 'new')])")
 
 
 if __name__ == "__main__":
