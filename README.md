@@ -20,7 +20,6 @@ replacer(replacements)
 - **Multiple replacements** - Apply many find-and-replace operations in one pass
 - **Case sensitivity control** - Case-sensitive or case-insensitive matching
 - **Regex support** - Use regular expressions for complex patterns
-- **Progress tracking** - Visual progress bar with tqdm
 - **Flexible filtering**:
   - Ignore specific directories (e.g., `.git`, `.venv`, `node_modules`)
   - Ignore specific files

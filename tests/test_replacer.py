@@ -102,7 +102,7 @@ def test_ignore_files(tmp_path: Path) -> None:
     (tmp_path / "process.txt").write_text("foo")
     (tmp_path / "ignore.txt").write_text("foo")
 
-    directory = Directory(path=tmp_path, ignore_files=[tmp_path / "ignore.txt"])
+    directory = Directory(path=tmp_path, ignore_files=(tmp_path / "ignore.txt",))
     replacer = Replacer(files=directory.selected_files)
     replacer([("foo", "bar")])
 
