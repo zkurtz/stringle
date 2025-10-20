@@ -147,6 +147,7 @@ class Replacer:
         """
         if not self.sort:
             return self.replacements
+        breakpoint()
         return sorted(self.replacements, key=lambda x: len(x[0]), reverse=True)
 
     def _replace_in_content(
@@ -206,7 +207,6 @@ class Replacer:
             replacements=replacements,
             compiled_patterns=compiled_patterns,
         )
-
         if modified_content != content:
             file_path.write_text(modified_content, encoding="utf-8")
             return 1
@@ -234,13 +234,6 @@ class Replacer:
                 seen.add(term)
             raise ValueError(f"Duplicate search term(s) found in replacements: {sorted(duplicates)}")
 
-        # Set replacements and clear cached property to get ordered replacements
-        object.__setattr__(self, "replacements", replacements)
-        try:
-            delattr(self, "ordered_replacements")
-        except AttributeError:
-            pass
-
         # Compile regex patterns if needed
         compiled_patterns = []
         if self.use_regex:
@@ -251,10 +244,7 @@ class Replacer:
         logger.info(f"Processing {len(self.files)} files with {len(replacements)} replacement(s)")
 
         files_modified = 0
-
-        iterator = tqdm(self.files, desc="Processing files")
-
-        for file_path in iterator:
+        for file_path in tqdm(self.files, desc="Processing files"):
             files_modified += self._process_file(
                 file_path,
                 replacements=self.ordered_replacements,
