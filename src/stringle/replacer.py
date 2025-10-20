@@ -117,18 +117,67 @@ class Replacer:
 
     Args:
         files: List of file paths to process
+        replacements: List of (search, replace) tuples
         case_sensitive: Whether to perform case-sensitive matching (default: True)
         use_regex: Whether to treat search patterns as regular expressions (default: False)
+        sort: Whether to sort replacements by search string length (longest first) (default: True)
 
     Example:
         >>> directory = Directory(path='/path/to/directory')
-        >>> replacer = Replacer(files=directory.selected_files)
-        >>> replacer([('old_text', 'new_text'), ('another_old', 'another_new')])
+        >>> replacer = Replacer(
+        ...     files=directory.selected_files,
+        ...     replacements=[('old_text', 'new_text'), ('another_old', 'another_new')]
+        ... )
+        >>> replacer()
     """
 
     files: list[Path]
+    replacements: list[tuple[str, str]]
     case_sensitive: bool = True
     use_regex: bool = False
+    sort: bool = True
+
+    def __attrs_post_init__(self) -> None:
+        """Validate replacements after initialization."""
+        # Validate that no search term appears more than once
+        search_terms = [search for search, _ in self.replacements]
+        if len(search_terms) != len(set(search_terms)):
+            # Find duplicates for error message
+            seen = set()
+            duplicates = set()
+            for term in search_terms:
+                if term in seen:
+                    duplicates.add(term)
+                seen.add(term)
+            raise ValueError(f"Duplicate search term(s) found in replacements: {sorted(duplicates)}")
+
+    @cached_property
+    def ordered_replacements(self) -> list[tuple[str, str]]:
+        """Get replacements in the correct order.
+
+        If sort is True, sorts replacements by the length of the search string
+        (longest first) to ensure more specific replacements happen before
+        general ones.
+
+        Returns:
+            Ordered list of (search, replace) tuples
+        """
+        if not self.sort:
+            return self.replacements
+        return sorted(self.replacements, key=lambda x: len(x[0]), reverse=True)
+
+    @cached_property
+    def compiled_patterns(self) -> list[tuple[re.Pattern, str]]:
+        """Get compiled regex patterns for replacements.
+
+        Returns:
+            List of (compiled_pattern, replacement) tuples if use_regex is True,
+            empty list otherwise
+        """
+        if not self.use_regex:
+            return []
+        flags = 0 if self.case_sensitive else re.IGNORECASE
+        return [(re.compile(search, flags), replace) for search, replace in self.ordered_replacements]
 
     def _replace_in_content(
         self,
@@ -187,52 +236,22 @@ class Replacer:
             replacements=replacements,
             compiled_patterns=compiled_patterns,
         )
-
         if modified_content != content:
             file_path.write_text(modified_content, encoding="utf-8")
             return 1
 
         return 0
 
-    def __call__(self, replacements: list[tuple[str, str]]) -> None:
-        """Execute the search and replace operation.
-
-        Args:
-            replacements: List of (search, replace) tuples
-
-        Raises:
-            ValueError: If any search term appears more than once in replacements
-        """
-        # Validate that no search term appears more than once
-        search_terms = [search for search, _ in replacements]
-        if len(search_terms) != len(set(search_terms)):
-            # Find duplicates for error message
-            seen = set()
-            duplicates = set()
-            for term in search_terms:
-                if term in seen:
-                    duplicates.add(term)
-                seen.add(term)
-            raise ValueError(f"Duplicate search term(s) found in replacements: {sorted(duplicates)}")
-
-        # Compile regex patterns if needed
-        compiled_patterns = []
-        if self.use_regex:
-            flags = 0 if self.case_sensitive else re.IGNORECASE
-            for search, replace in replacements:
-                compiled_patterns.append((re.compile(search, flags), replace))
-
-        logger.info(f"Processing {len(self.files)} files with {len(replacements)} replacement(s)")
+    def __call__(self) -> None:
+        """Execute the search and replace operation."""
+        logger.info(f"Processing {len(self.files)} files with {len(self.replacements)} replacement(s)")
 
         files_modified = 0
-
-        iterator = tqdm(self.files, desc="Processing files")
-
-        for file_path in iterator:
+        for file_path in tqdm(self.files, desc="Processing files"):
             files_modified += self._process_file(
                 file_path,
-                replacements=replacements,
-                compiled_patterns=compiled_patterns,
+                replacements=self.ordered_replacements,
+                compiled_patterns=self.compiled_patterns,
             )
 
         logger.info(f"Modified {files_modified} file(s)")
