@@ -199,7 +199,22 @@ class Replacer:
 
         Args:
             replacements: List of (search, replace) tuples
+
+        Raises:
+            ValueError: If any search term appears more than once in replacements
         """
+        # Validate that no search term appears more than once
+        search_terms = [search for search, _ in replacements]
+        if len(search_terms) != len(set(search_terms)):
+            # Find duplicates for error message
+            seen = set()
+            duplicates = set()
+            for term in search_terms:
+                if term in seen:
+                    duplicates.add(term)
+                seen.add(term)
+            raise ValueError(f"Duplicate search term(s) found in replacements: {sorted(duplicates)}")
+
         # Compile regex patterns if needed
         compiled_patterns = []
         if self.use_regex:

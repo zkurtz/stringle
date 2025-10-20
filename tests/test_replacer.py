@@ -206,3 +206,62 @@ def test_directory_other_files(tmp_path: Path) -> None:
 
     assert len(other) == 1
     assert tmp_path / ".git" / "config" in other
+
+
+def test_duplicate_search_terms_different_replacements(tmp_path: Path) -> None:
+    """Test that duplicate search terms with different replacements raise ValueError."""
+    import pytest
+
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("hello world")
+
+    directory = Directory(path=tmp_path)
+    replacer = Replacer(files=directory.selected_files)
+
+    # Should raise ValueError for duplicate search terms with different replacements
+    with pytest.raises(ValueError, match="Duplicate search term.*hello"):
+        replacer([("hello", "hi"), ("hello", "goodbye")])
+
+
+def test_duplicate_search_terms_same_replacement(tmp_path: Path) -> None:
+    """Test that duplicate search terms even with same replacement raise ValueError."""
+    import pytest
+
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("hello world")
+
+    directory = Directory(path=tmp_path)
+    replacer = Replacer(files=directory.selected_files)
+
+    # Should raise ValueError even if the replacement is the same (redundant)
+    with pytest.raises(ValueError, match="Duplicate search term.*hello"):
+        replacer([("hello", "hi"), ("hello", "hi")])
+
+
+def test_different_search_terms_same_replacement(tmp_path: Path) -> None:
+    """Test that different search terms with same replacement work fine."""
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("hello world")
+
+    directory = Directory(path=tmp_path)
+    replacer = Replacer(files=directory.selected_files)
+
+    # Should NOT raise ValueError for different search terms with same replacement
+    replacer([("hello", "greeting"), ("world", "greeting")])
+
+    assert test_file.read_text() == "greeting greeting"
+
+
+def test_multiple_duplicate_search_terms(tmp_path: Path) -> None:
+    """Test error message with multiple duplicate search terms."""
+    import pytest
+
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("foo bar baz")
+
+    directory = Directory(path=tmp_path)
+    replacer = Replacer(files=directory.selected_files)
+
+    # Should raise ValueError listing all duplicates
+    with pytest.raises(ValueError, match="Duplicate search term.*bar.*foo"):
+        replacer([("foo", "a"), ("bar", "b"), ("foo", "c"), ("bar", "d")])
