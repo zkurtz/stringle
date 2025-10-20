@@ -147,7 +147,6 @@ class Replacer:
         """
         if not self.sort:
             return self.replacements
-        breakpoint()
         return sorted(self.replacements, key=lambda x: len(x[0]), reverse=True)
 
     def _replace_in_content(
