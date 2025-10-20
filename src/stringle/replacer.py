@@ -149,23 +149,6 @@ class Replacer:
             return self.replacements
         return sorted(self.replacements, key=lambda x: len(x[0]), reverse=True)
 
-    def _get_ordered_replacements(self, replacements: list[tuple[str, str]]) -> list[tuple[str, str]]:
-        """Get replacements in the correct order.
-
-        If sort is True, sorts replacements by the length of the search string
-        (longest first) to ensure more specific replacements happen before
-        general ones.
-
-        Args:
-            replacements: List of (search, replace) tuples
-
-        Returns:
-            Ordered list of (search, replace) tuples
-        """
-        if not self.sort:
-            return replacements
-        return sorted(replacements, key=lambda x: len(x[0]), reverse=True)
-
     def _replace_in_content(
         self,
         content: str,
@@ -235,15 +218,34 @@ class Replacer:
 
         Args:
             replacements: List of (search, replace) tuples
+
+        Raises:
+            ValueError: If any search term appears more than once in replacements
         """
-        # Get ordered replacements
-        ordered_replacements = self._get_ordered_replacements(replacements)
+        # Validate that no search term appears more than once
+        search_terms = [search for search, _ in replacements]
+        if len(search_terms) != len(set(search_terms)):
+            # Find duplicates for error message
+            seen = set()
+            duplicates = set()
+            for term in search_terms:
+                if term in seen:
+                    duplicates.add(term)
+                seen.add(term)
+            raise ValueError(f"Duplicate search term(s) found in replacements: {sorted(duplicates)}")
+
+        # Set replacements and clear cached property to get ordered replacements
+        object.__setattr__(self, "replacements", replacements)
+        try:
+            delattr(self, "ordered_replacements")
+        except AttributeError:
+            pass
 
         # Compile regex patterns if needed
         compiled_patterns = []
         if self.use_regex:
             flags = 0 if self.case_sensitive else re.IGNORECASE
-            for search, replace in ordered_replacements:
+            for search, replace in self.ordered_replacements:
                 compiled_patterns.append((re.compile(search, flags), replace))
 
         logger.info(f"Processing {len(self.files)} files with {len(replacements)} replacement(s)")
@@ -255,7 +257,7 @@ class Replacer:
         for file_path in iterator:
             files_modified += self._process_file(
                 file_path,
-                replacements=ordered_replacements,
+                replacements=self.ordered_replacements,
                 compiled_patterns=compiled_patterns,
             )
 
